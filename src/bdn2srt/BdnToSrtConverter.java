@@ -3,8 +3,10 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package javamovierenamer;
+package bdn2srt;
 
+import filefilters.SubRipFileFilter;
+import filefilters.BdnXmlFileFilter;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -15,7 +17,6 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
-import javax.swing.filechooser.FileFilter;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
@@ -27,40 +28,19 @@ import org.w3c.dom.NodeList;
  *
  * @author cwlin
  */
-class XmlFilter extends FileFilter {
+public class BdnToSrtConverter {
 
-	@Override
-	public boolean accept(File f) {
-		return f.getName().toLowerCase().endsWith(".xml") || f.isDirectory();
+	private BdnToSrtListener listener = null;
+
+	public BdnToSrtConverter() {
+		this.listener = new CliBdnToSrtListener();
 	}
-
-	@Override
-	public String getDescription() {
-		return "BDN XML files (*.xml)";
-	}
-}
-
-class SrtFilter extends FileFilter {
-
-	@Override
-	public boolean accept(File f) {
-		return f.getName().toLowerCase().endsWith(".srt") || f.isDirectory();
-	}
-
-	@Override
-	public String getDescription() {
-		return "SubRip file (*.srt)";
-	}
-}
-
-public class BDN2Srt {
-
 	public static void main(String[] args) {
 		File in = null;
 		File out = null;
 		JFileChooser chooser = new JFileChooser();
 		chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-		chooser.setFileFilter(new XmlFilter());
+		chooser.setFileFilter(new BdnXmlFileFilter());
 		chooser.setCurrentDirectory(new File("/home/cwlin/Dropbox/subtitles/The Wrestler"));
 		int result = chooser.showOpenDialog(null);
 		if (result == JFileChooser.APPROVE_OPTION) {
@@ -69,7 +49,7 @@ public class BDN2Srt {
 		}
 		JFileChooser chooser2 = new JFileChooser();
 		chooser2.setFileSelectionMode(JFileChooser.FILES_ONLY);
-		chooser2.setFileFilter(new SrtFilter());
+		chooser2.setFileFilter(new SubRipFileFilter());
 		chooser2.setCurrentDirectory(new File(chooser.getSelectedFile().getAbsolutePath()));
 		int result2 = chooser2.showSaveDialog(null);
 		if (result2 == JFileChooser.APPROVE_OPTION) {
@@ -77,8 +57,12 @@ public class BDN2Srt {
 			out = new File(path);
 		}
 
-		BDN2Srt parser = new BDN2Srt();
+		BdnToSrtConverter parser = new BdnToSrtConverter();
 		parser.readBdn(in, out);
+	}
+
+	public void setListener(BdnToSrtListener listener) {
+		this.listener = listener;
 	}
 
 	public static String BDNTimeToSrtTime(String time, Float frameRate) {
@@ -155,19 +139,18 @@ public class BDN2Srt {
 			Float frameRate = Float.parseFloat(formatElement.getAttribute("FrameRate"));
 			NodeList eventNl = doc.getElementsByTagName("Event");
 
-			System.out.println(eventNl.getLength());
-			for (int i = 0; i < eventNl.getLength(); i++) {
+			int total = eventNl.getLength();
+			listener.changeStatus("Total length: " + total);
+			for (int i = 0; i < total; i++) {
 				Node eventNode = eventNl.item(i);
 				Element eventElement = (Element) eventNode;
 				NodeList graphNodes = eventNode.getChildNodes();
 				String startTime = eventElement.getAttribute("InTC");
 				String endTime = eventElement.getAttribute("OutTC");
-				startTime = BDN2Srt.BDNTimeToSrtTime(startTime, frameRate);
-				endTime = BDN2Srt.BDNTimeToSrtTime(endTime, frameRate);
+				startTime = BdnToSrtConverter.BDNTimeToSrtTime(startTime, frameRate);
+				endTime = BdnToSrtConverter.BDNTimeToSrtTime(endTime, frameRate);
 
-				System.out.println(i + 1);
-				System.out.println(startTime);
-				System.out.println(endTime);
+				listener.changeStatus("Converting: " + (i+1) + "/" + total);
 
 				out.append(String.format("%d", (i + 1))).append("\r\n");
 				out.append(startTime);
@@ -187,9 +170,8 @@ public class BDN2Srt {
 						String outBmpFilePath = outParentDirectory.toString() + "/" + text;
 
 						// convert file and save to destination
-						BDN2Srt.pngToBmp(new File(inPngFilePath), new File(outBmpFilePath));
+						BdnToSrtConverter.pngToBmp(new File(inPngFilePath), new File(outBmpFilePath));
 					}
-					System.out.println(text);
 					out.append(text).append("\r\n");
 				}
 				out.append("\r\n");

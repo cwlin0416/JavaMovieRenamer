@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package javamovierenamer;
+package javamovierenamer.renamer;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -16,8 +16,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.swing.JFileChooser;
@@ -27,7 +25,15 @@ import net.sf.json.JSONObject;
  *
  * @author cwlin
  */
-public class JavaMovieRenamer {
+public class MovieRenamer {
+
+	private MovieRenameListener renameListener = null;
+	private int totalTasks = 0;
+	private int currentTasks = 0;
+
+	public MovieRenamer() {
+		this.setListener(new CliMovieRenameListener());
+	}
 
 	/**
 	 * @param args the command line arguments
@@ -37,10 +43,69 @@ public class JavaMovieRenamer {
 		chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		chooser.setCurrentDirectory(new File("/media/cwlin/6AFB73BA67D29A75/mislabftp/"));
 		int result = chooser.showOpenDialog(null);
+
+		MovieRenamer renamer = new MovieRenamer();
 		if (result == JFileChooser.APPROVE_OPTION) {
 			String path = chooser.getSelectedFile().getAbsolutePath();
 			final File folder = new File(path);
-			listFilesForFolder(folder);
+			renamer.startRename(folder);
+		}
+	}
+
+	public void setListener(MovieRenameListener listener) {
+		this.renameListener = listener;
+	}
+
+	public void startRename(final File folder) {
+		if (folder == null) {
+			return;
+		}
+		if (folder.listFiles() == null) {
+			return;
+		}
+		this.totalTasks += folder.listFiles().length;
+		for (final File fileEntry : folder.listFiles()) {
+			this.renameListener.changeProgress(this.totalTasks, ++this.currentTasks);
+			if (fileEntry.isDirectory()) {
+				this.startRename(fileEntry);
+			} else {
+				String extension = getFileExtension(fileEntry);
+				if (extension == null) {
+					continue;
+				}
+				if (!extension.equals("avi") && !extension.equals("mkv") && !extension.equals("mp4")) {
+					continue;
+				}
+				try {
+					this.renameListener.changeStatus("Quering... " + fileEntry.getName());
+					MovieData data = getMovieData(fileEntry);
+					String newName = data.getFileDirectoryName();
+					File parent = fileEntry.getParentFile();
+					String oriName = parent.getName();
+					this.renameListener.changeStatus("Got chinese movie name..." + data.getChineseName());
+
+					if (newName != null && !newName.equals(oriName)) {
+						if (this.renameListener.renameMovie(oriName, newName, data)) {
+							String path = parent.getParent() + "/" + newName;
+							System.out.println(path);
+							File newDir = new File(path);
+
+							if (newDir.exists()) {
+								this.renameListener.changeStatus("New dirname " + newName + " exists.");
+							}
+							if (parent.renameTo(newDir)) {
+								this.renameListener.changeStatus("Rename successfully.");
+							} else {
+								this.renameListener.changeStatus("Rename failed.");
+							}
+						}
+					}
+
+				} catch (Exception e) {
+					System.out.println("listFilesForFolder:" + e);
+				}
+			}
+
 		}
 	}
 
@@ -52,60 +117,6 @@ public class JavaMovieRenamer {
 			extension = fileName.substring(i + 1);
 		}
 		return extension;
-	}
-
-	public static void listFilesForFolder(final File folder) {
-		for (final File fileEntry : folder.listFiles()) {
-			if (fileEntry.isDirectory()) {
-				listFilesForFolder(fileEntry);
-			} else {
-				String extension = getFileExtension(fileEntry);
-				if (extension == null) {
-					continue;
-				}
-				if (!extension.equals("avi") && !extension.equals("mkv") && !extension.equals("mp4")) {
-					continue;
-				}
-				try {
-					System.out.println("Quering...");
-					String newName = getMovieName(fileEntry);
-					File parent = fileEntry.getParentFile();
-					String oriName = parent.getName();
-
-					if (newName != null && !newName.equals(oriName)) {
-						int key;
-						// Prompt to change name
-						System.out.print("\nDo you want to change name? (y/N)");
-						do {
-							key = System.in.read();
-						} while (key == 10);
-
-						if (key == 121) {
-							String path = parent.getParent() + "/" + newName;
-							System.out.println(path);
-							File newDir = new File(path);
-
-							if (newDir.exists()) {
-								System.out.println("New dirname " + newName + " exists.");
-							}
-							if (parent.renameTo(newDir)) {
-								System.out.println("Rename successfully.");
-							} else {
-								System.out.println("Rename failed.");
-							}
-
-						} else {
-							System.out.println("Skip...");
-						}
-					}
-
-				} catch (Exception e) {
-					System.out.println("listFilesForFolder:" + e);
-				}
-
-			}
-		}
-
 	}
 
 	public static File getMovieDirectory(File movieFile) {
@@ -186,18 +197,26 @@ public class JavaMovieRenamer {
 		return data;
 	}
 
-	public static String getMovieName(File movieFile) {
+	public static MovieData getMovieData(File movieFile) {
 		try {
-			MovieData data = JavaMovieRenamer.parseMovieFileName(movieFile);
+			MovieData data = MovieRenamer.parseMovieFileName(movieFile);
 			OmdbApi omdb = new OmdbApi();
 			AtMovieApi atMovie = new AtMovieApi();
 			data = atMovie.queryMovieData(data);
 			data = omdb.queryMovieData(data);
-			data.printFileInfo();
+			return data;
+		} catch (Exception ex) {
+			System.out.println("getMovieData: " + ex);
+		}
+		return null;
+	}
+
+	public static String getMovieName(File movieFile) {
+		try {
+			MovieData data = getMovieData(movieFile);
 			return data.getFileDirectoryName();
 		} catch (Exception ex) {
 			System.out.println("getMovieName: " + ex);
-			//Logger.getLogger(JavaMovieRenamer.class.getName()).log(Level.SEVERE, null, ex);
 		}
 		return null;
 	}

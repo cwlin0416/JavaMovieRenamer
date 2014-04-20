@@ -2,11 +2,11 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package javamovierenamer;
+package javamovierenamer.renamer;
 
 import java.io.File;
-import static javamovierenamer.JavaMovieRenamer.getMovieDirectory;
-import static javamovierenamer.JavaMovieRenamer.getMovieName;
+import static javamovierenamer.renamer.MovieRenamer.getMovieDirectory;
+import static javamovierenamer.renamer.MovieRenamer.getMovieName;
 
 /**
  *
@@ -15,7 +15,7 @@ import static javamovierenamer.JavaMovieRenamer.getMovieName;
 public class MovieData {
 	// Original movie file info
 
-	File file;
+	public File file;
 	String fileMovieName;
 	String fileMovieYear;
 	String fileResolution;
@@ -30,8 +30,8 @@ public class MovieData {
 	int atMovieLength = 0;
 	String imdbEnglishName = null;
 	String imdbReleaseDate = null;
-	String imdbRating = null;
-	String imdbVotes = null;
+	public String imdbRating = null;
+	public String imdbVotes = null;
 	String imdbYear = null;
 
 	@Override
