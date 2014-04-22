@@ -381,7 +381,7 @@ public class MainFrame extends javax.swing.JFrame implements MovieRenameListener
 	public boolean renameMovie(String oriName, String newName, MovieData movieData) {
 		boolean result = MovieInfoDialog.showConfirmMessage(this, movieData, "Do you want rename to '" + newName + "' ?");
 		System.out.println("Result: " + result);
-		return false;
+		return result;
 	}
 
 	@Override
