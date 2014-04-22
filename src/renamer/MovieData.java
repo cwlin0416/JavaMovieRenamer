@@ -2,11 +2,11 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package javamovierenamer.renamer;
+package renamer;
 
 import java.io.File;
-import static javamovierenamer.renamer.MovieRenamer.getMovieDirectory;
-import static javamovierenamer.renamer.MovieRenamer.getMovieName;
+import static renamer.MovieRenamer.getMovieDirectory;
+import static renamer.MovieRenamer.getMovieName;
 
 /**
  *

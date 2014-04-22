@@ -3,12 +3,12 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package javamovierenamer;
+package ui;
 
 import bdn2srt.BdnToSrtConverter;
-import javamovierenamer.renamer.MovieRenameListener;
-import javamovierenamer.renamer.MovieRenamer;
-import javamovierenamer.renamer.MovieData;
+import renamer.MovieRenameListener;
+import renamer.MovieRenamer;
+import renamer.MovieData;
 import java.io.File;
 import filefilters.BdnXmlFileFilter;
 import filefilters.SubRipFileFilter;

@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package javamovierenamer.renamer;
+package renamer;
 
 import java.io.BufferedReader;
 import java.io.File;
