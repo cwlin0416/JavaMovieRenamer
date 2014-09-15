@@ -317,6 +317,10 @@ class AtMovieApi {
 			Matcher m = p.matcher(result);
 			if (m.matches()) {
 				data.atMovieChineseName = m.group(1).trim();
+				{
+					data.atMovieChineseName = data.atMovieChineseName.replaceAll("<(.|\n)*?>", "");
+					data.atMovieChineseName = data.atMovieChineseName.trim();
+				}
 				data.atMovieEnglishName = m.group(2).trim();
 				{
 					// Contagion [2001], remove year
