@@ -434,7 +434,7 @@ class OmdbApi {
 		if (dateString == null) {
 			return null;
 		}
-		SimpleDateFormat sdf = new SimpleDateFormat("d MMMM yyyy", Locale.ENGLISH);
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH);
 		try {
 			Date date = sdf.parse(dateString);
 			return String.format("%4d-%02d-%02d", date.getYear() + 1900, date.getMonth(), date.getDate());
