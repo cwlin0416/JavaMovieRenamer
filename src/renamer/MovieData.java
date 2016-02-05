@@ -28,6 +28,7 @@ public class MovieData {
 	String atMovieLink = null;
 	String atMovieFilmId = null;
 	int atMovieLength = 0;
+        String imdbId = null;
 	String imdbEnglishName = null;
 	String imdbReleaseDate = null;
 	public String imdbRating = null;

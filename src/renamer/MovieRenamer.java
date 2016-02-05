@@ -327,7 +327,7 @@ class AtMovieApi {
                 fullname = fullname.replaceAll("<(.|\n)*?>", "");
                 fullname = fullname.trim();
                 System.out.println(fullname);
-                Pattern p2 = Pattern.compile("(([0-9A-Za-z\\[\\] ]|[^\\x00-\\x40\\x5B-\\x60\\x7B-\\x7F])+) ([A-Za-z0-9:.,&\\- '\\[\\]]+)");
+                Pattern p2 = Pattern.compile("(([0-9A-Za-z\\[\\]]|[^\\x00-\\x40\\x5B-\\x60\\x7B-\\x7F])+) ([A-Za-z0-9:.,&\\- '\\[\\]]+)");
                 Matcher m2 = p2.matcher(fullname);
                 if (m2.matches()) {
                     data.atMovieChineseName = m2.group(1).trim();
@@ -352,6 +352,13 @@ class AtMovieApi {
                 data.atMovieLength = 0;
             }
             data.atMovieReleaseDate = date;
+
+            Pattern imdbIdP = Pattern.compile(".*<a  href=\"http://us.imdb.com/Title\\?(.*)\" target=_blank>IMDb</a>.*");
+            Matcher imdbIdM = imdbIdP.matcher(result);
+            if (imdbIdM.matches()) {
+                String imdbId = "tt" + imdbIdM.group(1);
+                data.imdbId = imdbId;
+            }
         } catch (Exception e) {
             System.out.println("getMovieDetailData: " + e);
         }
@@ -455,6 +462,10 @@ class OmdbApi {
     public MovieData queryMovieData(MovieData data) {
         try {
             String url = this.omdbapiUrl + "?t=" + URLEncoder.encode(data.getFileMovieName(), "UTF-8");
+            if( data.imdbId != null ) {
+                url = this.omdbapiUrl + "?i=" + data.imdbId;
+                System.out.println("Get omdb data by imdb id: " + data.imdbId);
+            }
             String jsonResult = this.sendGet(url);
 
             JSONObject jsonObject = JSONObject.fromObject(jsonResult);
