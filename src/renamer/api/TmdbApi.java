@@ -35,6 +35,9 @@ public class TmdbApi implements RenamerApiInterface {
                 String releaseDate = item.getString("release_date");
                 String originalTitle = item.getString("original_title");
 
+                System.out.println("Get name: " + title);
+                System.out.println("Get release date: " + releaseDate);
+                System.out.println("Get overview: " + overview);
                 if (data.chineseName == null) {
                     data.chineseName = title;
                     data.releaseDate = releaseDate;
@@ -46,7 +49,12 @@ public class TmdbApi implements RenamerApiInterface {
                         System.out.println("==============================================");
                     }
                     break;
+                } else if (!data.chineseName.equals(title)) {
+                    System.out.println("==============================================");
+                    System.out.println("!!Be carefully chinese name not excetly same (" + data.chineseName + " vs " + title + ")!!");
+                    System.out.println("==============================================");
                 }
+                break; // get first result only
             }
 
             return data;

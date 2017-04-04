@@ -196,6 +196,7 @@ public class MovieRenamer {
             for (int i = 0; i < classes.length; i++) {
                 Class classe = classes[i];
                 System.out.println("Querying " + classe.getTypeName() + "...");
+                System.out.println("=============================================================");
                 RenamerApiInterface api = (RenamerApiInterface) classe.newInstance();
                 api.queryMovieData(data);
             }

@@ -10,6 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import renamer.MovieData;
 
 /**
@@ -33,43 +37,33 @@ public class AtMovieApi implements RenamerApiInterface {
         String title = data.getFileMovieName();
         List<AtMovieData> list = new ArrayList<>();
         try {
-            String url = "http://search.atmovies.com.tw/search/search.cfm";
+            String url = "http://search.atmovies.com.tw/search/";
 
             // Encode the query 
             String encodedQuery = URLEncoder.encode(title, "UTF-8");
             // This is the data that is going to be send to itcuties.com via POST request
             // 'e' parameter contains data to echo
-            String postData = "type=F&search_term=" + encodedQuery + "&search=" + URLEncoder.encode("提交", "UTF-8") + "&action=home&fr=search";
+            String postData = "type=all&search_term=" + encodedQuery + "&enc=UTF-8&fr=@-homepage";
             String htmlResult = this.sendPost(url, postData);
 
-            String after = htmlResult;
-
-            after = after.replaceAll("(.*)<OL>(.*)</ol>(.*)", "$2");
-            after = after.replaceAll("</div>", "</div>\r\n");
-            String[] lines = after.split("\r\n");
-            for (int i = 0; i < lines.length; i++) {
-                String line = lines[i].trim();
-                Pattern itemP = Pattern.compile(".*<LI><font.*>(.*)</font><a href=\"(.*)\".*>(.*)</a>.*");
-                Matcher itemM = itemP.matcher(line);
-                if (!itemM.matches()) {
-                    continue;
-                }
-                String link = itemM.group(2).trim();
-                Pattern linkP = Pattern.compile("redirect.cfm\\?p=F&d=([A-Za-z0-9]+)");
-                Matcher linkM = linkP.matcher(link);
-                if (!linkM.matches()) {
-                    continue;
-                }
+            Document doc = Jsoup.parse(htmlResult);
+            Elements resultLinks = doc.select("#main > div > div > section > div > div > div > div > blockquote > header");
+            //Elements resultLinks = doc.select("#main > div > div > section > div > div > div > div > blockquote > ol > li > a");
+            for (int i = 0; i < resultLinks.size(); i++) {
+                Element elem = resultLinks.get(i);
+                String type = elem.select("font:nth-child(1)").first().text();
+                String link = elem.select("a").first().attr("href");
+                String linkName = elem.select("a").first().text();
+                String year = elem.select("font:nth-child(3)").first().text();
 
                 AtMovieData atMovieData = new AtMovieData();
-                atMovieData.atMovieType = itemM.group(1).trim();
+                atMovieData.atMovieType = type;
                 atMovieData.atMovieLink = link;
-                atMovieData.atMovieLinkName = itemM.group(3).trim();
-                atMovieData.atMovieFilmId = linkM.group(1);
+                atMovieData.atMovieLinkName = linkName;
+                atMovieData.atMovieFilmId = link.replaceFirst("/F/", "");
                 System.out.println("AtMovie Search List: " + atMovieData.atMovieLinkName + ", FilmId: " + atMovieData.atMovieFilmId);
                 list.add(atMovieData);
             }
-
             // 有結果
             if (list.size() > 0) {
                 MovieData tempData;
@@ -94,7 +88,7 @@ public class AtMovieApi implements RenamerApiInterface {
                 }
                 if (isFound == false) {
                     System.out.println("==============================================");
-                    System.out.println("!!Be carefully english name not excetly same!!");
+                    System.out.println("!!Be carefully english name not excetly same (" + data.atMovieEnglishName + " vs " + title + ")!!");
                     System.out.println("==============================================");
                 }
                 return data;
@@ -108,51 +102,59 @@ public class AtMovieApi implements RenamerApiInterface {
 
     public MovieData queryMovieDetailData(MovieData data) {
         String filmId = data.atMovieFilmId;
-        String url = "http://app.atmovies.com.tw/movie/movie.cfm?action=filmdata&film_id=" + filmId;
-        String date = null;
-        String length = null;
+        String url = "http://search.atmovies.com.tw/F/" + filmId;
+        String chineseName = null, englishName = null, releaseDate = null, length = null, imdbId = null;
         try {
-            String result = this.sendGet(url);
-            //Pattern p = Pattern.compile(".*<span class=\"at21b\">(.*)</span><br>.*<span class=\"at12b_gray\">([A-Za-z0-9:.,&\\- '\\[\\]]+)</span>.*");
-            Pattern p = Pattern.compile(".*<div class=\"filmTitle\"><!-- filmTitle -->(.*)</div><!-- filmTitle end -->.*");
-            Matcher m = p.matcher(result);
-            if (m.matches()) {
-                String fullname = m.group(1);
-                fullname = fullname.replaceAll("<(.|\n)*?>", "");
-                fullname = fullname.trim();
-                System.out.println(fullname);
-                Pattern p2 = Pattern.compile("(([0-9A-Za-z\\[\\]]|[^\\x00-\\x40\\x5B-\\x60\\x7B-\\x7F])+) ([A-Za-z0-9:.,&\\- '\\[\\]]+)");
-                Matcher m2 = p2.matcher(fullname);
-                if (m2.matches()) {
-                    data.chineseName = m2.group(1).trim();
-                    data.atMovieEnglishName = m2.group(3).trim();
-                    Pattern p3 = Pattern.compile("(.*) \\[\\d+\\]");
-                    Matcher m3 = p3.matcher(data.atMovieEnglishName);
-                    if (m3.matches()) {
-                        data.atMovieEnglishName = m3.group(1).trim();
-                    }
+            String htmlResult = this.sendGet(url);
+            Document doc = Jsoup.parse(htmlResult);
+
+            String fullnameOri = doc.select("#main > div > div > div > cfprocessingdirective > div.filmTitle").first().text();
+            fullnameOri = fullnameOri.replaceAll("<(.|\n)*?>", "");
+            fullnameOri = fullnameOri.trim();
+            Pattern p2 = Pattern.compile("(([0-9A-Za-z\\[\\]]|[^\\x00-\\x40\\x5B-\\x60\\x7B-\\x7F])+) ([A-Za-z0-9:.,&\\- '\\[\\]]+)");
+            Matcher m2 = p2.matcher(fullnameOri);
+            if (m2.matches()) {
+                chineseName = m2.group(1).trim();
+                englishName = m2.group(3).trim();;
+                Pattern p3 = Pattern.compile("(.*) \\[\\d+\\]");
+                Matcher m3 = p3.matcher(englishName);
+                if (m3.matches()) {
+                    englishName = m3.group(1).trim();
                 }
-                System.out.println("Name: " + data.chineseName + "(" + data.atMovieEnglishName + ")");
             }
-            Pattern dateP = Pattern.compile(".*片長：(\\d+)分</li>.*上映日期：([0-9/]+)</li>.*<BR>.*");
-            Matcher dateM = dateP.matcher(result);
+
+            String lengthOri = doc.select("#filmTagBlock > span:nth-child(3) > ul > li:nth-child(1)").first().text();
+            Pattern lenP = Pattern.compile("片長：(\\d+)分");
+            Matcher lenM = lenP.matcher(lengthOri);
+            if (lenM.matches()) {
+                length = lenM.group(1);
+            }
+            String dateOri = doc.select("#filmTagBlock > span:nth-child(3) > ul > li:nth-child(2)").first().text();
+            Pattern dateP = Pattern.compile("上映日期：([0-9/]+)");
+            Matcher dateM = dateP.matcher(dateOri);
             if (dateM.matches()) {
-                length = dateM.group(1);
-                date = dateM.group(2).replaceAll("/", "-");
+                releaseDate = dateM.group(1).replaceAll("/", "-");
             }
+            String imdbLink = doc.select("#filmCastDataBlock > ul:nth-child(2) > li:nth-child(1) > a").first().attr("href");
+            Pattern imdbIdP = Pattern.compile("http://us.imdb.com/Title\\?(.*)");
+            Matcher imdbIdM = imdbIdP.matcher(imdbLink);
+            if (imdbIdM.matches()) {
+                imdbId = "tt" + imdbIdM.group(1);
+            }
+
             try {
                 data.atMovieLength = Integer.parseInt(length);
             } catch (Exception e) {
                 data.atMovieLength = 0;
             }
-            data.releaseDate = date;
-
-            Pattern imdbIdP = Pattern.compile(".*<a  href=\"http://us.imdb.com/Title\\?(.*)\" target=_blank>IMDb</a>.*");
-            Matcher imdbIdM = imdbIdP.matcher(result);
-            if (imdbIdM.matches()) {
-                String imdbId = "tt" + imdbIdM.group(1);
-                data.imdbId = imdbId;
-            }
+            data.chineseName = chineseName;
+            data.atMovieEnglishName = englishName;
+            data.releaseDate = releaseDate;
+            data.imdbId = imdbId;
+            System.out.println("Get name: " + chineseName + "(" + englishName + ")");
+            System.out.println("Get release date: " + releaseDate);
+            System.out.println("Get length: " + length);
+            System.out.println("Get imdb id: " + imdbId);
         } catch (Exception e) {
             System.out.println("getMovieDetailData: " + e);
         }

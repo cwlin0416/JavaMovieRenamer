@@ -41,7 +41,7 @@ public class OmdbApi implements RenamerApiInterface {
                 url = this.omdbapiUrl + "?i=" + data.imdbId;
                 System.out.println("Get omdb data by imdb id: " + data.imdbId);
             }
-            if( data.fileMovieYear != null ) {
+            if (data.fileMovieYear != null) {
                 url += "&y=" + data.fileMovieYear;
             }
             String jsonResult = this.sendGet(url);
@@ -52,6 +52,12 @@ public class OmdbApi implements RenamerApiInterface {
             data.imdbVotes = (String) jsonObject.get("imdbVotes");
             data.imdbReleaseDate = formatDate((String) jsonObject.get("Released"));
             data.imdbYear = (String) jsonObject.get("Year");
+
+            System.out.println("Get english Name: " + data.imdbEnglishName);
+            System.out.println("Get imdb rating: " + data.imdbRating);
+            System.out.println("Get imdb vote: " + data.imdbVotes);
+            System.out.println("Get imdb release date: " + data.imdbReleaseDate);
+            System.out.println("Get imdb year: " + data.imdbYear);
             return data;
         } catch (Exception e) {
             System.out.println("getMovieDataByTitle: " + e);
