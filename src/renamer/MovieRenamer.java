@@ -192,6 +192,7 @@ public class MovieRenamer {
     public static MovieData getMovieData(File movieFile) {
         try {
             MovieData data = MovieRenamer.parseMovieFileName(movieFile);
+            System.out.println("File movie name: " +  data.fileMovieName);
             Class[] classes = {AtMovieApi.class, TmdbApi.class, OmdbApi.class};
             for (int i = 0; i < classes.length; i++) {
                 Class classe = classes[i];
